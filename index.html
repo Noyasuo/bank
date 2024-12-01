@@ -35,7 +35,12 @@
             margin-right: 10px;
         }
         .saved-amount-container input {
-            width: 150px; /* Reduced width for input */
+            width: 100px;
+            text-align: center;
+        }
+        .saved-amount-container button {
+            width: 40px;
+            height: 40px;
         }
         
         /* Styling for fixed arrows at the bottom */
@@ -88,7 +93,9 @@
         <!-- Input for Saved Amount with label on the left -->
         <div class="saved-amount-container">
             <label for="savedAmount" class="form-label">Saved Amount:</label>
-            <input type="number" id="savedAmount" class="form-control" placeholder="Enter saved amount">
+            <button class="btn btn-danger" id="decrementButton">-</button>
+            <input type="number" id="savedAmount" class="form-control mx-2" readonly value="0">
+            <button class="btn btn-success" id="incrementButton">+</button>
         </div>
 
         <!-- Display Saved Amount -->
@@ -114,16 +121,30 @@
         const goalImage = document.getElementById('goalImage');
         const targetAmountText = document.getElementById('targetAmountText');
         const savedAmountInput = document.getElementById('savedAmount');
+        const incrementButton = document.getElementById('incrementButton');
+        const decrementButton = document.getElementById('decrementButton');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
         const completionText = document.getElementById('completionText');
         const prevArrow = document.getElementById('prevArrow');
         const nextArrow = document.getElementById('nextArrow');
 
-        let targetAmount = images[currentIndex].amount;
-        let totalSavedAmount = parseFloat(localStorage.getItem('totalSavedAmount')) || 0;
+        // Function to fetch and save to local storage
+        const STORAGE_KEY = 'piggyBankData';
+        function getLocalStorage() {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { totalSavedAmount: 0, currentIndex: 0 };
+        }
+        function setLocalStorage(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
 
-        // Update image and target amount with animation
+        // Load initial values from storage
+        const storageData = getLocalStorage();
+        let totalSavedAmount = storageData.totalSavedAmount || 0;
+        currentIndex = storageData.currentIndex || 0;
+
+        let targetAmount = images[currentIndex].amount;
+
         function updateImage() {
             goalImage.classList.add('hidden');
             setTimeout(() => {
@@ -132,50 +153,61 @@
                 targetAmount = amount;
                 targetAmountText.textContent = `Target: ₱${targetAmount.toLocaleString('en-PH')}`;
                 goalImage.classList.remove('hidden');
-                updateProgress(); // Recalculate progress
+                updateProgress();
             }, 500);
         }
 
-        // Update progress bar and text
         function updateProgress() {
             const percentage = targetAmount > 0 ? (totalSavedAmount / targetAmount) * 100 : 0;
             const formattedPercentage = percentage.toFixed(2);
 
-            // Update progress bar
             progressBar.style.width = `${Math.min(percentage, 100)}%`;
             progressBar.textContent = `${Math.min(formattedPercentage, 100)}%`;
 
-            // Update text
             progressText.textContent = `Saved: ₱${totalSavedAmount.toLocaleString('en-PH')}`;
-            completionText.textContent = `You have saved ${formattedPercentage}% of your target. Keep going!`;
+            completionText.textContent = `You have saved ${formattedPercentage}% of your target. Keep going Franz!`;
+
+            savedAmountInput.value = totalSavedAmount || 0;
         }
 
-        // Save total saved amount to localStorage
-        function saveValues() {
-            totalSavedAmount = parseFloat(savedAmountInput.value) || 0;
-            localStorage.setItem('totalSavedAmount', totalSavedAmount);
-            updateProgress();
-        }
+        incrementButton.addEventListener('click', () => {
+            const incrementValue = parseFloat(prompt("Enter the amount to add:", "0")) || 0;
+            if (incrementValue > 0) {
+                totalSavedAmount += incrementValue;
+                saveValues();
+            }
+        });
 
-        // Event listeners for arrows
+        decrementButton.addEventListener('click', () => {
+            const decrementValue = parseFloat(prompt("Enter the amount to reduce:", "0")) || 0;
+            if (decrementValue > 0 && totalSavedAmount >= decrementValue) {
+                totalSavedAmount -= decrementValue;
+                saveValues();
+            } else if (decrementValue > totalSavedAmount) {
+                alert("Cannot reduce more than the saved amount!");
+            }
+        });
+
         prevArrow.addEventListener('click', () => {
             currentIndex = (currentIndex - 1 + images.length) % images.length;
+            saveValues(); // Save index to local storage
             updateImage();
         });
 
         nextArrow.addEventListener('click', () => {
             currentIndex = (currentIndex + 1) % images.length;
+            saveValues(); // Save index to local storage
             updateImage();
         });
 
-        // Event listener for saved amount input
-        savedAmountInput.addEventListener('input', () => {
-            saveValues();
-        });
+        function saveValues() {
+            setLocalStorage({ totalSavedAmount, currentIndex });
+            updateProgress();
+        }
 
         // Initialize
-        savedAmountInput.value = totalSavedAmount || 0;
         updateImage();
+        updateProgress();
     </script>
 </body>
 </html>
